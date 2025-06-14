@@ -2,9 +2,11 @@ package com.dulaj.scratchgame.engine;
 
 import com.dulaj.scratchgame.config.GameConfig;
 import com.dulaj.scratchgame.model.Cell;
-import com.dulaj.scratchgame.model.Symbol;
 
 import java.util.*;
+
+
+// Builds the matrix using configured symbol weights (standard + bonus chance)
 
 public class MatrixGenerator {
 
@@ -15,14 +17,17 @@ public class MatrixGenerator {
         this.config = config;
     }
 
+
+    // Generate symbol matrix based on weights
+
     public Cell[][] generateMatrix() {
         int rows = config.getRows();
         int cols = config.getColumns();
-        Cell[][] matrix = new Cell[rows][cols];
+        var matrix = new Cell[rows][cols];
 
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
-                String symbol = pickSymbolForCell(row, col);
+                var symbol = pickSymbolForCell(row, col);
                 matrix[row][col] = new Cell(row, col, symbol);
             }
         }
@@ -30,30 +35,38 @@ public class MatrixGenerator {
         return matrix;
     }
 
+
+    // Decide whether to use standard or bonus symbol for this cell
+
     private String pickSymbolForCell(int row, int col) {
-        Map<String, Integer> weights = config.getStandardSymbolWeightsForCell(row, col);
+        var weights = config.getStandardSymbolWeightsForCell(row, col);
+
+        // Fallback to default weights if none are defined for this cell
         if (weights == null || weights.isEmpty()) {
             weights = config.getDefaultStandardSymbolWeights();
         }
 
-
-        if (random.nextDouble() < 0.15) {
-            return pickWeightedRandom(config.getBonusSymbolWeights());
-        }
-
-        return pickWeightedRandom(weights);
+        // 15% chance to use a bonus symbol instead of regular
+        return (random.nextDouble() < 0.15)
+                ? pickWeightedRandom(config.getBonusSymbolWeights())
+                : pickWeightedRandom(weights);
     }
 
+
+    // Pick a symbol using weighted random selection
+
     private String pickWeightedRandom(Map<String, Integer> weights) {
-        int total = weights.values().stream().mapToInt(i -> i).sum();
+        int total = weights.values().stream().mapToInt(Integer::intValue).sum();
         int roll = random.nextInt(total);
         int cumulative = 0;
-        for (Map.Entry<String, Integer> entry : weights.entrySet()) {
+
+        for (var entry : weights.entrySet()) {
             cumulative += entry.getValue();
             if (roll < cumulative) {
                 return entry.getKey();
             }
         }
-        throw new IllegalStateException("Failed to pick symbol");
+
+        throw new IllegalStateException("Symbol selection failed. Check weight config.");
     }
 }

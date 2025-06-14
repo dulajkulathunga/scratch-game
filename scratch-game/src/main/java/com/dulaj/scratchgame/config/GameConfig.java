@@ -47,7 +47,9 @@ public class GameConfig {
         public List<List<String>> covered_areas;
     }
 
-
+    /**
+     * Fetches symbol probabilities for a specific cell.
+     */
     public Map<String, Integer> getStandardSymbolWeightsForCell(int row, int col) {
         if (probabilities == null || probabilities.standard_symbols == null) return null;
 
@@ -58,20 +60,25 @@ public class GameConfig {
                 .orElse(null);
     }
 
-
+    /**
+     * Fallback standard symbol weights (from the first defined cell).
+     */
     public Map<String, Integer> getDefaultStandardSymbolWeights() {
         if (probabilities != null && probabilities.standard_symbols != null && !probabilities.standard_symbols.isEmpty()) {
             return probabilities.standard_symbols.get(0).symbols;
         }
-        return Map.of();
+        return Map.of(); // Java 9+ immutable empty map
     }
 
-
+    /**
+     * Bonus symbol weights from config.
+     */
     public Map<String, Integer> getBonusSymbolWeights() {
         if (probabilities != null && probabilities.bonus_symbols != null) {
             return probabilities.bonus_symbols.symbols;
         }
-        return Map.of();
+        return Map.of(); // Java 9+ immutable empty map
     }
+
 
 }

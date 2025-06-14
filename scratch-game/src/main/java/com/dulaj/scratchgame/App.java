@@ -1,34 +1,62 @@
 package com.dulaj.scratchgame;
 
+import com.dulaj.scratchgame.common.CliArgument;
 import com.dulaj.scratchgame.config.GameConfig;
-import com.dulaj.scratchgame.engine.GameRunner;
 import com.dulaj.scratchgame.engine.ConfigLoader;
+import com.dulaj.scratchgame.engine.GameRunner;
 
 
-public class App 
-{
+import java.util.Objects;
+
+public class App {
+
     public static void main(String[] args) {
+        // Validate basic usage
         if (args.length < 4) {
-            System.out.println("Usage: java -jar scratch-game.jar --config <config-file> --betting-amount <amount>");
+            printUsage();
             return;
         }
 
-        String configPath = null;
-        int betAmount = 0;
+        String configPath = extractConfigPath(args);
+        int betAmount = extractBettingAmount(args);
 
-        for (int i = 0; i < args.length; i++) {
-            switch (args[i]) {
-                case "--config" -> configPath = args[i + 1];
-                case "--betting-amount" -> betAmount = Integer.parseInt(args[i + 1]);
-            }
-        }
-
-        if (configPath == null || betAmount <= 0) {
-            System.out.println("Invalid arguments.");
+        if (isInvalid(configPath, betAmount)) {
+            System.out.println("Invalid arguments. Please check the config path and betting amount.");
             return;
         }
 
         GameConfig config = ConfigLoader.load(configPath);
         new GameRunner(config).run(betAmount);
+    }
+
+    private static void printUsage() {
+        System.out.println("Usage: java -jar scratch-game.jar --config <config-file> --betting-amount <amount>");
+    }
+
+    private static String extractConfigPath(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (CliArgument.fromFlag(args[i]) == CliArgument.CONFIG && i + 1 < args.length) {
+                return args[i + 1];
+            }
+        }
+        return null;
+    }
+
+    private static int extractBettingAmount(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (CliArgument.fromFlag(args[i]) == CliArgument.BETTING_AMOUNT && i + 1 < args.length) {
+                try {
+                    return Integer.parseInt(args[i + 1]);
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid betting amount. Please enter a number.");
+                    return -1;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static boolean isInvalid(String configPath, int betAmount) {
+        return Objects.requireNonNullElse(configPath, "").isBlank() || betAmount <= 0;
     }
 }

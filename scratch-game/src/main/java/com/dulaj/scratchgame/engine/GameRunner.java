@@ -1,12 +1,12 @@
 package com.dulaj.scratchgame.engine;
-
-import com.dulaj.scratchgame.config.GameConfig;
 import com.dulaj.scratchgame.config.GameConfig;
 import com.dulaj.scratchgame.model.Cell;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-
 import java.util.*;
+
+
+ //GameRunner handles the full scratch game execution flow.
 
 public class GameRunner {
     private final GameConfig config;
@@ -15,64 +15,79 @@ public class GameRunner {
         this.config = config;
     }
 
+     //Run game logic with the given bet amount.
     public void run(int betAmount) {
         System.out.println("Running game with bet amount: " + betAmount);
 
-
-        MatrixGenerator generator = new MatrixGenerator(config);
+        // Step 1: Generate the symbol matrix
+        var generator = new MatrixGenerator(config);
         Cell[][] matrix = generator.generateMatrix();
 
-
-        WinEvaluator evaluator = new WinEvaluator(config);
+        // Step 2: Check for winning combinations in the matrix
+        var evaluator = new WinEvaluator(config);
         Map<String, List<String>> wins = evaluator.evaluate(matrix);
 
+        // Step 3: Calculate total reward based on matches and rules
+        double reward = calculateReward(wins, betAmount);
 
-        double reward = 0;
-        for (Map.Entry<String, List<String>> entry : wins.entrySet()) {
+        // Step 4: Apply any bonus if applicable
+        var bonusHandler = new BonusHandler(config);
+        var bonusResult = bonusHandler.applyBonus(matrix, !wins.isEmpty(), reward);
+
+        // Step 5: Print final result as pretty JSON
+        printFormattedResult(matrix, bonusResult, wins);
+    }
+
+    // Calculate reward by applying symbol and rule multipliers
+    private double calculateReward(Map<String, List<String>> wins, int betAmount) {
+        double reward = 0.0;
+
+        for (var entry : wins.entrySet()) {
             String symbol = entry.getKey();
-            List<String> rules = entry.getValue();
+            List<String> appliedRules = entry.getValue();
 
-            GameConfig.SymbolDefinition symbolDef = config.getSymbols().get(symbol);
-            if (symbolDef == null) continue;
+            var symbolDef = config.getSymbols().get(symbol);
 
-            double symbolReward = symbolDef.reward_multiplier;
+            if (Objects.nonNull(symbolDef)) {
+                double symbolReward = symbolDef.reward_multiplier;
 
-            for (String rule : rules) {
-                double ruleMultiplier = config.getWin_combinations().get(rule).reward_multiplier;
-                symbolReward *= ruleMultiplier;
+                for (String ruleKey : appliedRules) {
+                    var rule = config.getWin_combinations().get(ruleKey);
+                    symbolReward *= rule.reward_multiplier;
+                }
+
+                reward += betAmount * symbolReward;
             }
-
-            reward += betAmount * symbolReward;
         }
 
+        return reward;
+    }
 
-        BonusHandler bonusHandler = new BonusHandler(config);
-        BonusHandler.BonusResult bonusResult = bonusHandler.applyBonus(matrix, !wins.isEmpty(), reward);
-
-
+    // Print matrix, reward, and bonus info in JSON for easy debugging
+    private void printFormattedResult(Cell[][] matrix, BonusHandler.BonusResult bonusResult, Map<String, List<String>> wins) {
         try {
-            List<List<String>> matrixAsList = new ArrayList<>();
+            List<List<String>> matrixView = new ArrayList<>();
             for (Cell[] row : matrix) {
-                List<String> rowList = new ArrayList<>();
+                List<String> rowSymbols = new ArrayList<>();
                 for (Cell cell : row) {
-                    rowList.add(cell.symbol());
+                    rowSymbols.add(cell.symbol());
                 }
-                matrixAsList.add(rowList);
+                matrixView.add(rowSymbols);
             }
 
             Map<String, Object> output = new LinkedHashMap<>();
-            output.put("matrix", matrixAsList);
+            output.put("matrix", matrixView);
             output.put("reward", bonusResult.reward());
             output.put("applied_winning_combinations", wins);
             output.put("applied_bonus_symbol", bonusResult.bonusSymbol());
 
-            ObjectMapper mapper = new ObjectMapper();
-            String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(output);
-            System.out.println(json);
+            String json = new ObjectMapper()
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(output);
 
+            System.out.println(json);
         } catch (Exception e) {
             System.err.println("Failed to format output: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 }
