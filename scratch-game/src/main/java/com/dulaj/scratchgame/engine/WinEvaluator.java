@@ -1,6 +1,7 @@
 package com.dulaj.scratchgame.engine;
 import com.dulaj.scratchgame.config.GameConfig;
 import com.dulaj.scratchgame.model.Cell;
+import com.dulaj.scratchgame.model.WhenType;
 
 import java.util.*;
 public class WinEvaluator {
@@ -19,8 +20,7 @@ public class WinEvaluator {
         for (Map.Entry<String, GameConfig.WinCombination> entry : config.win_combinations.entrySet()) {
             String key = entry.getKey();
             GameConfig.WinCombination rule = entry.getValue();
-
-            if ("same_symbols".equals(rule.when)) {
+            if (WhenType.from(rule.when) == WhenType.SAME_SYMBOLS) {
                 for (var sym : symbolCounts.entrySet()) {
                     if (sym.getValue() >= rule.count) {
                         result.computeIfAbsent(sym.getKey(), k -> new ArrayList<>()).add(key);
@@ -33,8 +33,7 @@ public class WinEvaluator {
         for (Map.Entry<String, GameConfig.WinCombination> entry : config.win_combinations.entrySet()) {
             String key = entry.getKey();
             GameConfig.WinCombination rule = entry.getValue();
-
-            if ("linear_symbols".equals(rule.when)) {
+            if (WhenType.from(rule.when) == WhenType.LINEAR_SYMBOLS) {
                 for (List<String> positions : rule.covered_areas) {
                     String symbol = null;
                     boolean allMatch = true;

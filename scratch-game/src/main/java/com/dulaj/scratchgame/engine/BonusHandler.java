@@ -1,9 +1,12 @@
 package com.dulaj.scratchgame.engine;
 import com.dulaj.scratchgame.config.GameConfig;
 import com.dulaj.scratchgame.model.Cell;
+import com.dulaj.scratchgame.model.ImpactType;
 
 import java.util.List;
 import java.util.Optional;
+
+import static com.dulaj.scratchgame.model.ImpactType.*;
 
 public class BonusHandler {
     private final GameConfig config;
@@ -24,10 +27,12 @@ public class BonusHandler {
 
         double finalReward = baseReward;
 
-        switch (def.impact) {
-            case "multiply_reward" -> finalReward *= def.reward_multiplier;
-            case "extra_bonus" -> finalReward += def.extra != null ? def.extra : 0;
-            case "miss" -> {}
+
+        ImpactType impact = ImpactType.from(def.impact);
+        switch (impact) {
+            case MULTIPLY_REWARD -> finalReward *= def.reward_multiplier;
+            case EXTRA_BONUS -> finalReward += def.extra != null ? def.extra : 0;
+            case MISS -> {}
         }
 
         return new BonusResult(finalReward, bonusSymbol);
