@@ -1,8 +1,14 @@
 package com.dulaj.scratchgame.config;
 
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 import java.util.Map;
 
+@Setter
+@Getter
 public class GameConfig {
     public int columns = 3;
     public int rows = 3;
@@ -40,4 +46,32 @@ public class GameConfig {
         public String group;
         public List<List<String>> covered_areas;
     }
+
+
+    public Map<String, Integer> getStandardSymbolWeightsForCell(int row, int col) {
+        if (probabilities == null || probabilities.standard_symbols == null) return null;
+
+        return probabilities.standard_symbols.stream()
+                .filter(p -> p.row == row && p.column == col)
+                .findFirst()
+                .map(p -> p.symbols)
+                .orElse(null);
+    }
+
+
+    public Map<String, Integer> getDefaultStandardSymbolWeights() {
+        if (probabilities != null && probabilities.standard_symbols != null && !probabilities.standard_symbols.isEmpty()) {
+            return probabilities.standard_symbols.get(0).symbols;
+        }
+        return Map.of();
+    }
+
+
+    public Map<String, Integer> getBonusSymbolWeights() {
+        if (probabilities != null && probabilities.bonus_symbols != null) {
+            return probabilities.bonus_symbols.symbols;
+        }
+        return Map.of();
+    }
+
 }

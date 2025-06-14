@@ -1,9 +1,13 @@
 package com.dulaj.scratchgame.engine;
 
 import com.dulaj.scratchgame.config.GameConfig;
+import com.dulaj.scratchgame.model.Cell;
+import com.dulaj.scratchgame.model.Symbol;
 
 import java.util.*;
+
 public class MatrixGenerator {
+
     private final GameConfig config;
     private final Random random = new Random();
 
@@ -11,70 +15,45 @@ public class MatrixGenerator {
         this.config = config;
     }
 
-    public List<List<String>> generateMatrix() {
-        int rows = config.rows;
-        int cols = config.columns;
-        List<List<String>> matrix = new ArrayList<>();
+    public Cell[][] generateMatrix() {
+        int rows = config.getRows();
+        int cols = config.getColumns();
+        Cell[][] matrix = new Cell[rows][cols];
 
         for (int row = 0; row < rows; row++) {
-            List<String> rowList = new ArrayList<>();
             for (int col = 0; col < cols; col++) {
-                String symbol = getRandomStandardSymbol(col, row);
-                rowList.add(symbol);
+                String symbol = pickSymbolForCell(row, col);
+                matrix[row][col] = new Cell(row, col, symbol);
             }
-            matrix.add(rowList);
         }
-
-        applyRandomBonusSymbol(matrix);
 
         return matrix;
     }
 
-    private String getRandomStandardSymbol(int col, int row) {
+    private String pickSymbolForCell(int row, int col) {
+        Map<String, Integer> weights = config.getStandardSymbolWeightsForCell(row, col);
+        if (weights == null || weights.isEmpty()) {
+            weights = config.getDefaultStandardSymbolWeights();
+        }
 
-        GameConfig.StandardSymbolProbability prob = config.probabilities.standard_symbols.stream()
-                .filter(p -> p.column == col && p.row == row)
-                .findFirst()
-                .orElse(config.probabilities.standard_symbols.get(0));
 
-        Map<String, Integer> symbols = prob.symbols;
-        int totalWeight = symbols.values().stream().mapToInt(i -> i).sum();
-        int rand = random.nextInt(totalWeight);
+        if (random.nextDouble() < 0.15) {
+            return pickWeightedRandom(config.getBonusSymbolWeights());
+        }
 
+        return pickWeightedRandom(weights);
+    }
+
+    private String pickWeightedRandom(Map<String, Integer> weights) {
+        int total = weights.values().stream().mapToInt(i -> i).sum();
+        int roll = random.nextInt(total);
         int cumulative = 0;
-        for (Map.Entry<String, Integer> entry : symbols.entrySet()) {
+        for (Map.Entry<String, Integer> entry : weights.entrySet()) {
             cumulative += entry.getValue();
-            if (rand < cumulative) {
+            if (roll < cumulative) {
                 return entry.getKey();
             }
         }
-
-        return "F";
-    }
-
-    private void applyRandomBonusSymbol(List<List<String>> matrix) {
-        List<String> bonusSymbols = new ArrayList<>(config.probabilities.bonus_symbols.symbols.keySet());
-        if (bonusSymbols.isEmpty()) return;
-
-        String bonus = getRandomBonusSymbol();
-        int randRow = random.nextInt(config.rows);
-        int randCol = random.nextInt(config.columns);
-        matrix.get(randRow).set(randCol, bonus);
-    }
-
-    private String getRandomBonusSymbol() {
-        Map<String, Integer> symbols = config.probabilities.bonus_symbols.symbols;
-        int totalWeight = symbols.values().stream().mapToInt(i -> i).sum();
-        int rand = random.nextInt(totalWeight);
-
-        int cumulative = 0;
-        for (Map.Entry<String, Integer> entry : symbols.entrySet()) {
-            cumulative += entry.getValue();
-            if (rand < cumulative) {
-                return entry.getKey();
-            }
-        }
-
-        return "MISS";
+        throw new IllegalStateException("Failed to pick symbol");
     }
 }
